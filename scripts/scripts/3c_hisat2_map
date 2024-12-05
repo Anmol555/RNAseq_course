@@ -1,0 +1,42 @@
+#!/bin/bash
+#SBATCH --job-name=hisat2_mapping          # Job name
+#SBATCH --partition=pibu_el8              # Partition name
+#SBATCH --cpus-per-task=4                 # Number of CPU cores per task
+#SBATCH --mem=8000                        # Memory allocation (in MB)
+#SBATCH --time=13:00:00                   # Maximum runtime (HH:MM:SS)
+#SBATCH --mail-type=END
+#SBATCH --array=0-11                      # Array index range (adjust based on number of samples)
+#SBATCH --mail-user=anmol.ratan@students.unibe.ch
+#SBATCH --output=/data/users/aratan/rnaseq/map/mapped_reads/output_hisat2map_%a.o  # Output log
+#SBATCH --error=/data/users/aratan/rnaseq/map/mapped_reads/error_hisat2map_%a.e    # Error log
+
+
+# Variables
+CONTAINER="/containers/apptainer/hisat2_samtools_408dfd02f175cd88.sif"  # Container path
+REFERENCE="/data/users/aratan/rnaseq/map/index/genome_index"           # Reference genome index path
+READS_DIR="/data/users/aratan/rnaseq/breastcancer_de/reads/"           # Directory containing FASTQ files
+OUTPUT_DIR="/data/users/aratan/rnaseq/map/mapped_reads/"   # Directory for output SAM files
+THREADS=4                                                              # Number of threads
+
+# Ensure output directory exists
+mkdir -p $OUTPUT_DIR
+
+# List of samples
+SAMPLES=(HER21 HER22 HER23 TNBC1 TNBC2 TNBC3 NonTNBC1 NonTNBC2 NonTNBC3 Normal1 Normal2 Normal3)
+
+# Get the sample for the current array task
+SAMPLE=${SAMPLES[$SLURM_ARRAY_TASK_ID]}
+
+# Define input and output files
+READ1=${READS_DIR}${SAMPLE}_R1.fastq.gz
+READ2=${READS_DIR}${SAMPLE}_R2.fastq.gz
+SAM_FILE=${OUTPUT_DIR}${SAMPLE}.sam
+
+echo "Processing $SAMPLE (Task ID: $SLURM_ARRAY_TASK_ID)..."
+
+# Run HISAT2 mapping
+apptainer exec --bind /data/ $CONTAINER \
+hisat2 -x $REFERENCE -1 $READ1 -2 $READ2 -S $SAM_FILE -p $THREADS
+
+echo "$SAMPLE mapping completed."
+

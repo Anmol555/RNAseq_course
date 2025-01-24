@@ -1,0 +1,62 @@
+#!/bin/bash
+#SBATCH --job-name=human_genome_download
+#SBATCH --output=/data/users/aratan/rnaseq/map/output_HG_%j.o  # STDOUT
+#SBATCH --error=/data/users/aratan/rnaseq/map/error_HG_%j.e    # STDERR
+#SBATCH --mail-user=anmol.ratan@students.unibe.ch  # Email for job updates
+#SBATCH --mail-type=END
+#SBATCH --time=12:00:00     # Adjust time if needed
+#SBATCH --partition=pibu_el8
+#SBATCH --cpus-per-task=1   # One CPU
+#SBATCH --mem=8G            # Adjust memory if needed
+
+cd /data/users/aratan/rnaseq/map
+
+
+# Load necessary modules (if wget, awk, etc., need modules)
+module load wget
+
+# Variables
+ENSEMBL_RELEASE="release-113"
+SPECIES="homo_sapiens"
+ASSEMBLY="GRCh38"
+DNA_URL="ftp://ftp.ensembl.org/pub/${ENSEMBL_RELEASE}/fasta/${SPECIES}/dna/${SPECIES}.${ASSEMBLY}.dna.primary_assembly.fa.gz"
+GTF_URL="ftp://ftp.ensembl.org/pub/${ENSEMBL_RELEASE}/gtf/${SPECIES}/${SPECIES}.${ASSEMBLY}.113.gtf.gz"
+CHECKSUMS_DNA_URL="ftp://ftp.ensembl.org/pub/${ENSEMBL_RELEASE}/fasta/${SPECIES}/dna/CHECKSUMS"
+CHECKSUMS_GTF_URL="ftp://ftp.ensembl.org/pub/${ENSEMBL_RELEASE}/gtf/${SPECIES}/CHECKSUMS"
+
+# Download the primary genome assembly
+wget https://ftp.ensembl.org/pub/release-113/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+
+# Download the annotation file
+wget https://ftp.ensembl.org/pub/release-113/gtf/homo_sapiens/Homo_sapiens.GRCh38.113.gtf.gz
+
+echo "Downloading DNA CHECKSUMS file..."
+wget -q ${CHECKSUMS_DNA_URL} -O CHECKSUMS_DNA
+
+echo "Downloading GTF CHECKSUMS file..."
+wget -q ${CHECKSUMS_GTF_URL} -O CHECKSUMS_GTF
+
+# Verify checksums
+echo "Verifying genome file checksum..."
+DNA_CHECKSUM=$(grep "$(basename ${DNA_URL})" CHECKSUMS_DNA | awk '{print $1}')
+LOCAL_DNA_CHECKSUM=$(md5sum ${SPECIES}.${ASSEMBLY}.dna.primary_assembly.fa.gz | awk '{print $1}')
+
+if [ "${DNA_CHECKSUM}" == "${LOCAL_DNA_CHECKSUM}" ]; then
+    echo "Genome sequence file checksum matches!"
+else
+    echo "Genome sequence file checksum mismatch!"
+    exit 1
+fi
+
+echo "Verifying annotation file checksum..."
+GTF_CHECKSUM=$(grep "$(basename ${GTF_URL})" CHECKSUMS_GTF | awk '{print $1}')
+LOCAL_GTF_CHECKSUM=$(md5sum ${SPECIES}.${ASSEMBLY}.113.gtf.gz | awk '{print $1}')
+
+if [ "${GTF_CHECKSUM}" == "${LOCAL_GTF_CHECKSUM}" ]; then
+    echo "Annotation file checksum matches!"
+else
+    echo "Annotation file checksum mismatch!"
+    exit 1
+fi
+
+echo "Download and verification complete!"

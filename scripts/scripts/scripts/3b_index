@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=16G
+#SBATCH --time=6:00:00
+#SBATCH --job-name=hisat2_index
+#SBATCH --mail-user=anmol.ratan@students.unibe.ch
+#SBATCH --mail-type=END
+#SBATCH --output=/data/users/aratan/rnaseq/map/index/output_hisat2_%j.o
+#SBATCH --error=/data/users/aratan/rnaseq/map/index/error_hisat2_%j.e
+#SBATCH --partition=pibu_el8
+
+# Paths
+CONTAINER="/containers/apptainer/hisat2_samtools_408dfd02f175cd88.sif"
+COMPRESSED_REFERENCE="/data/users/aratan/rnaseq/map/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz"
+REFERENCE="/data/users/aratan/rnaseq/map/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
+OUTDIR="/data/users/aratan/rnaseq/map/index/"
+
+# Decompress the reference file if it's compressed
+if [[ -f $COMPRESSED_REFERENCE ]]; then
+    echo "Decompressing the reference file..."
+    gunzip -c $COMPRESSED_REFERENCE > $REFERENCE
+    echo "Decompression completed."
+elif [[ ! -f $REFERENCE ]]; then
+    echo "Error: Reference file not found!"
+    exit 1
+fi
+
+# Create output directory
+mkdir -p $OUTDIR
+
+# Run HISAT2 build
+apptainer exec --bind /data/ $CONTAINER hisat2-build -p 8 $REFERENCE $OUTDIR/genome_index
+
+echo "HISAT2 index creation completed successfully!"
+

@@ -1,0 +1,27 @@
+#!/bin/bash
+#SBATCH --job-name=multiqc
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16G
+#SBATCH --time=02:00:00
+#SBATCH --mail-user=anmol.ratan@students.unibe.ch
+#SBATCH --mail-type=END
+#SBATCH --output=/data/users/aratan/rnaseq/multiQC/output_multiqc_%j.o
+#SBATCH --error=/data/users/aratan/rnaseq/multiQC/error_multiqc_%j.e
+#SBATCH --partition=pibu_el8
+
+# Define working and output directories
+WORKDIR=/data/users/aratan/rnaseq/fastqc
+OUTPUTDIR=/data/users/aratan/rnaseq/multiQC
+
+# Change to the working directory
+cd $WORKDIR
+
+# Create the output directory if it doesn't exist
+mkdir -p $OUTPUTDIR
+
+# Run MultiQC using Apptainer
+apptainer exec \
+--bind $WORKDIR:$WORKDIR --bind $OUTPUTDIR:$OUTPUTDIR \
+/containers/apptainer/multiqc-1.19.sif \
+multiqc $WORKDIR -o $OUTPUTDIR
+
